@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract LineaLXP is Ownable {
+    string public name = "Linea Experience Points";
+    string public symbol = "LXP";
+    uint8 public decimals = 0;  // Whole number points, no decimals
+
+    mapping(address => uint256) private balances;
+    mapping(address => bool) private allowedTransfer;
+
+    event PointsEarned(address indexed user, uint256 amount);
+    event PointsRedeemed(address indexed user, uint256 amount);
+    event TransferAllowed(address indexed user, bool allowed);
+
+    // Allow an admin to add experience points to a user's balance
+    function earnPoints(address _user, uint256 _amount) external onlyOwner {
+        require(_amount > 0, "Amount must be positive");
+        balances[_user] += _amount;
+        emit PointsEarned(_user, _amount);
+    }
+
+    // Redeem points by reducing user's balance
+    function redeemPoints(uint256 _amount) external {
+        require(_amount > 0, "Amount must be positive");
+        require(balances[msg.sender] >= _amount, "Insufficient points");
+
+        balances[msg.sender] -= _amount;
+        emit PointsRedeemed(msg.sender, _amount);
+    }
+
+    // Allow or disallow a user to transfer points (admin only)
+    function setTransferAllowed(address _user, bool _allowed) external onlyOwner {
+        allowedTransfer[_user] = _allowed;
+        emit TransferAllowed(_user, _allowed);
+    }
+
+    // Transfer points between users if allowed by admin
+    function transferPoints(address _to, uint256 _amount) external {
+        require(allowedTransfer[msg.sender], "Transfer not allowed for this user");
+        require(balances[msg.sender] >= _amount, "Insufficient points");
+        require(_to != address(0), "Invalid recipient");
+
+        balances[msg.sender] -= _amount;
+        balances[_to] += _amount;
+    }
+
+    // View points balance
+    function balanceOf(address _user) external view returns (uint256) {
+        return balances[_user];
+    }
+}
